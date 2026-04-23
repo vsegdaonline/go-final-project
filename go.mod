@@ -1,8 +1,11 @@
-module final-project
+module github.com/vsegdaonline/go-final-project
 
 go 1.25.0
 
+replace go1f => ./
+
 require (
+	go1f v0.0.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/stretchr/testify v1.11.1
 	modernc.org/sqlite v1.49.1
