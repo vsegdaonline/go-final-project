@@ -1,10 +1,9 @@
 package main
 
 import (
+	"go1f/pkg/db"
 	"go1f/pkg/server"
 	"log"
-
-	"github.com/vsegdaonline/go-final-project/pkg/db"
 )
 
 func main() {
