@@ -12,7 +12,7 @@ func afterNow(date, now time.Time) bool {
 }
 
 func NextDate(now time.Time, dstart, repeat string) (string, error) {
-	date, err := time.Parse("20060102", dstart)
+	date, err := time.Parse(dateFormat, dstart)
 	if err != nil {
 		return "", err
 	}
@@ -49,10 +49,10 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 			}
 			if dayNumber <= 0 {
 				switch dayNumber {
-				case -1:
-					day[0] = true
 				case -2:
 					day[32] = true
+				case -1:
+					day[0] = true
 				default:
 					return "", errors.New("недопустимый день месяца")
 				}
@@ -89,21 +89,14 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 				case day[date.Day()]:
 					if afterNow(date, now) {
 						ok = false
-						break
 					}
-				case day[0]:
-					if date.AddDate(0, 0, 1).Month() != date.Month() {
-						if afterNow(date, now) {
-							ok = false
-							break
-						}
+				case day[32] && (date.AddDate(0, 0, 2).Month() != date.Month() && date.AddDate(0, 0, 1).Month() == date.Month()):
+					if afterNow(date, now) {
+						ok = false
 					}
-				case day[32]:
-					if date.AddDate(0, 0, 2).Month() != date.Month() && date.AddDate(0, 0, 1).Month() == date.Month() {
-						if afterNow(date, now) {
-							ok = false
-							break
-						}
+				case day[0] && (date.AddDate(0, 0, 1).Month() != date.Month()):
+					if afterNow(date, now) {
+						ok = false
 					}
 				}
 			}
@@ -161,5 +154,5 @@ func NextDate(now time.Time, dstart, repeat string) (string, error) {
 		return "", errors.New("symbol is not correct")
 	}
 
-	return date.Format("20060102"), nil
+	return date.Format(dateFormat), nil
 }
