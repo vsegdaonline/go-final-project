@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"go1f/pkg/db"
@@ -41,37 +42,42 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
 	var buf bytes.Buffer
-
+	//сразу устанавливаю заголовок
+	//так как и ошибки и успешные ответы будут в json формате
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
 
 	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
 
 	if task.Title == "" {
 		err = errors.New("не указан заголовок задачи")
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
 
 	if err = checkDate(&task); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
 
 	id, err := db.AddTask(&task)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	writeJson(w, id)
+	writeJson(w, map[string]string{"id": strconv.Itoa(int(id))})
 }
 
 func Init(r *chi.Mux) {
@@ -80,9 +86,13 @@ func Init(r *chi.Mux) {
 }
 
 func checkDate(task *db.Task) error {
-	now := time.Now()
+	nowStr := time.Now().Format(dateFormat)
+	now, err := time.Parse(dateFormat, nowStr)
+	if err != nil {
+		return err
+	}
 	if task.Date == "" {
-		task.Date = now.Format(dateFormat)
+		task.Date = nowStr
 	}
 	t, err := time.Parse(dateFormat, task.Date)
 	if err != nil {
@@ -97,7 +107,7 @@ func checkDate(task *db.Task) error {
 	}
 	if afterNow(now, t) {
 		if len(task.Repeat) == 0 {
-			task.Date = now.Format(dateFormat)
+			task.Date = nowStr
 		} else {
 			task.Date = next
 		}
@@ -106,14 +116,5 @@ func checkDate(task *db.Task) error {
 }
 
 func writeJson(w http.ResponseWriter, data any) {
-	result, err := json.Marshal(data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	_ = json.NewEncoder(w).Encode(data)
 }
