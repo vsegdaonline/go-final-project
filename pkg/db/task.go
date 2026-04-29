@@ -18,3 +18,8 @@ func AddTask(task *Task) (int64, error) {
 	}
 	return id, err
 }
+
+func Tasks(limit int) ([]*Task, error) {
+	query := `SELECT * FROM scheduler WHERE `
+	
+}

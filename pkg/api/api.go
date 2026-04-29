@@ -15,6 +15,12 @@ import (
 
 const dateFormat = "20060102"
 
+func Init(r *chi.Mux) {
+	r.Get("/api/nextdate", nextDayHandler)
+	r.Post("/api/task", addTaskHandler)
+	r.Get("/api/tasks", tasksHandler)
+}
+
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	now := r.FormValue("now")
 	date := r.FormValue("date")
@@ -78,11 +84,6 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJson(w, map[string]string{"id": strconv.Itoa(int(id))})
-}
-
-func Init(r *chi.Mux) {
-	r.Get("/api/nextdate", nextDayHandler)
-	r.Post("/api/task", addTaskHandler)
 }
 
 func checkDate(task *db.Task) error {
