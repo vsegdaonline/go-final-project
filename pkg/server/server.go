@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"go1f/pkg/api"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func getPort() string {
@@ -16,7 +18,8 @@ func getPort() string {
 }
 
 func Run() error {
-	http.Handle("/", http.FileServer(http.Dir("web")))
-	api.Init()
-	return http.ListenAndServe(getPort(), nil)
+	r := chi.NewRouter()
+	r.Handle("/*", http.FileServer(http.Dir("web")))
+	api.Init(r)
+	return http.ListenAndServe(getPort(), r)
 }
