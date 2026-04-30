@@ -16,7 +16,6 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJson(w, map[string]string{"error": err.Error()})
-		//writeJson(w, map[string]string{"error": err.Error()})
 		return
 	}
 	writeJson(w, TasksResp{
