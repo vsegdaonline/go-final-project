@@ -87,6 +87,38 @@ func UpdateTask(task *Task) error {
 	return nil
 }
 
+func UpdateDate(next, id string) error {
+	query := `UPDATE scheduler SET date = :date WHERE id = :id`
+	res, err := db.Exec(query, sql.Named("id", id), sql.Named("date", next))
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for updating task")
+	}
+	return nil
+}
+
+func DeleteTask(id string) error {
+	query := `DELETE FROM scheduler WHERE id = :id`
+	res, err := db.Exec(query, sql.Named("id", id))
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for deleting task")
+	}
+	return nil
+}
+
 func searchTasks(limit int, search string) ([]*Task, error) {
 	tasks := []*Task{}
 	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE :search OR comment LIKE :search ORDER BY date LIMIT :limit`
