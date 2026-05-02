@@ -21,7 +21,7 @@ const dateFormat = "20060102"
 
 func Init(r *chi.Mux) {
 	r.Post("/api/signin", signinHandler)
-	r.Get("/api/nextdate", auth(nextDayHandler))
+	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", auth(addTaskHandler))
 	r.Get("/api/tasks", auth(tasksHandler))
 	r.Get("/api/task", auth(getTaskHandler))
