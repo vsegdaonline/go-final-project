@@ -39,9 +39,8 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	if err != nil {
 		return tasks, err
 	}
-	defer func() {
-		_ = tasksRows.Close()
-	}()
+	defer tasksRows.Close()
+
 	for tasksRows.Next() {
 		var task Task
 		err = tasksRows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
@@ -122,25 +121,11 @@ func DeleteTask(id string) error {
 func searchTasks(limit int, search string) ([]*Task, error) {
 	tasks := []*Task{}
 	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE :search OR comment LIKE :search ORDER BY date LIMIT :limit`
-	queryByDate := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = :date LIMIT :limit`
 
 	date, ok := isDate(search)
 	if ok {
-		tasksRows, err := db.Query(queryByDate, sql.Named("date", date), sql.Named("limit", limit))
+		tasks, err := searchByDate(date, limit)
 		if err != nil {
-			return tasks, err
-		}
-		defer func() { _ = tasksRows.Close() }()
-
-		for tasksRows.Next() {
-			var task Task
-			err = tasksRows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
-			if err != nil {
-				return tasks, err
-			}
-			tasks = append(tasks, &task)
-		}
-		if err = tasksRows.Err(); err != nil {
 			return tasks, err
 		}
 		return tasks, nil
@@ -171,4 +156,27 @@ func isDate(search string) (string, bool) {
 	}
 	dateStr := date.Format("20060102")
 	return dateStr, true
+}
+
+func searchByDate(date string, limit int) ([]*Task, error) {
+	query := `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = :date LIMIT :limit`
+	tasks := []*Task{}
+	tasksRows, err := db.Query(query, sql.Named("date", date), sql.Named("limit", limit))
+	if err != nil {
+		return tasks, err
+	}
+	defer tasksRows.Close()
+
+	for tasksRows.Next() {
+		var task Task
+		err = tasksRows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+		if err != nil {
+			return tasks, err
+		}
+		tasks = append(tasks, &task)
+	}
+	if err = tasksRows.Err(); err != nil {
+		return tasks, err
+	}
+	return tasks, nil
 }

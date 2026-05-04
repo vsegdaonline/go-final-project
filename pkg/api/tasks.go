@@ -6,6 +6,7 @@ import (
 	"errors"
 	"go1f/pkg/db"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -48,6 +49,47 @@ func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJson(w, task)
+}
+
+func addTaskHandler(w http.ResponseWriter, r *http.Request) {
+	var task db.Task
+	var buf bytes.Buffer
+	//сразу устанавливаю заголовок
+	//так как и ошибки и успешные ответы будут в json формате
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
+		return
+	}
+
+	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
+		return
+	}
+
+	if task.Title == "" {
+		err = errors.New("не указан заголовок задачи")
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
+		return
+	}
+
+	if err = checkDate(&task); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJson(w, map[string]string{"error": err.Error()})
+		return
+	}
+
+	id, err := db.AddTask(&task)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		writeJson(w, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJson(w, map[string]string{"id": strconv.Itoa(int(id))})
 }
 
 func putTaskHandler(w http.ResponseWriter, r *http.Request) {

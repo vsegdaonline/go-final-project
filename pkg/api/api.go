@@ -8,7 +8,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"go1f/pkg/db"
@@ -78,48 +77,6 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, map[string]string{"token": signedToken})
 }
 
-func auth(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
-			var jwtS string
-			cookie, err := r.Cookie("token")
-			if err == nil {
-				jwtS = cookie.Value
-			} else {
-				http.Error(w, "cookie is empty", http.StatusUnauthorized)
-				return
-			}
-			var valid bool
-			token, err := jwt.Parse(jwtS, func(t *jwt.Token) (interface{}, error) {
-				return []byte(pass), nil
-			})
-			valid = token.Valid
-			if err != nil || !valid {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				http.Error(w, "cookie is not correct", http.StatusUnauthorized)
-				return
-			}
-			hashFromToken, ok := claims["hash"].(string)
-			if !ok {
-				http.Error(w, "cookie is not correct", http.StatusUnauthorized)
-				return
-			}
-			hash := sha256.Sum256([]byte(pass))
-			hashString := hex.EncodeToString(hash[:])
-			if hashFromToken != hashString {
-				http.Error(w, "cookie is not correct", http.StatusUnauthorized)
-				return
-			}
-		}
-		next(w, r)
-	})
-}
-
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	now := r.FormValue("now")
 	date := r.FormValue("date")
@@ -142,47 +99,6 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func addTaskHandler(w http.ResponseWriter, r *http.Request) {
-	var task db.Task
-	var buf bytes.Buffer
-	//сразу устанавливаю заголовок
-	//так как и ошибки и успешные ответы будут в json формате
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	_, err := buf.ReadFrom(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		writeJson(w, map[string]string{"error": err.Error()})
-		return
-	}
-
-	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		writeJson(w, map[string]string{"error": err.Error()})
-		return
-	}
-
-	if task.Title == "" {
-		err = errors.New("не указан заголовок задачи")
-		w.WriteHeader(http.StatusBadRequest)
-		writeJson(w, map[string]string{"error": err.Error()})
-		return
-	}
-
-	if err = checkDate(&task); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		writeJson(w, map[string]string{"error": err.Error()})
-		return
-	}
-
-	id, err := db.AddTask(&task)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		writeJson(w, map[string]string{"error": err.Error()})
-		return
-	}
-	writeJson(w, map[string]string{"id": strconv.Itoa(int(id))})
 }
 
 func checkDate(task *db.Task) error {
